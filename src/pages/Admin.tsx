@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { Trash2, Download, Upload, Star, Plus, X, Pencil, Truck, BarChart3, Lock, KeyRound, ShieldCheck, Eye, EyeOff, Video, Film, Clock, Play } from "lucide-react";
+import { Trash2, Download, Upload, Plus, X, Pencil, Truck, BarChart3, Lock, KeyRound, ShieldCheck, Eye, EyeOff, Video, Film, Clock, Play } from "lucide-react";
 import ProductEditDialog from "@/components/admin/ProductEditDialog";
 import HighlightsManager from "@/components/admin/HighlightsManager";
 import ReviewsManager from "@/components/admin/ReviewsManager";
@@ -173,7 +173,7 @@ const Admin = () => {
         <StatsOverview />
         <Tabs defaultValue="analytics" className="w-full mt-6">
           <TabsList className="glass-gold flex-wrap h-auto justify-start">
-            {["analytics", "appointments", "shop", "orders", "payments", "reviews", "highlights", "testimonials", "offers", "messages", "customers"].map((t) => (
+            {["analytics", "appointments", "shop", "orders", "payments", "reviews", "highlights", "offers", "messages", "customers"].map((t) => (
               <TabsTrigger key={t} value={t} className="capitalize data-[state=active]:bg-gradient-gold data-[state=active]:text-primary-foreground">
                 {t === "analytics" ? "Analytics & Tracking" : t === "payments" ? "Payment Gateway" : t}
               </TabsTrigger>
@@ -186,7 +186,6 @@ const Admin = () => {
           <TabsContent value="payments"><PaymentSettingsTab /></TabsContent>
           <TabsContent value="reviews"><ReviewsManager /></TabsContent>
           <TabsContent value="highlights"><HighlightsManager /></TabsContent>
-          <TabsContent value="testimonials"><TestimonialsTab /></TabsContent>
           <TabsContent value="offers"><OffersTab /></TabsContent>
           <TabsContent value="messages"><MessagesTab /></TabsContent>
           <TabsContent value="customers"><CustomersTab /></TabsContent>
@@ -619,89 +618,6 @@ const ProductsTab = () => {
         ))}
       </div>
       <ProductEditDialog product={editing} onClose={() => setEditing(null)} onSaved={reload} />
-    </>
-  );
-};
-
-/* ─── testimonials (client reviews) ─── */
-
-const TestimonialsTab = () => {
-  const [list, reload] = useList("testimonials");
-  const [f, setF] = useState({ client_name: "", location: "", rating: 5, message: "", avatar_url: "" });
-  const [avatarPreview, setAvatarPreview] = useState("");
-
-  const create = async () => {
-    if (!f.client_name.trim()) return toast.error("Client name required");
-    if (!f.message.trim()) return toast.error("Review message required");
-    try {
-      await createAdminDoc("testimonials", {
-        client_name: f.client_name.trim(),
-        location: f.location.trim() || null,
-        rating: f.rating,
-        message: f.message.trim(),
-        avatar_url: f.avatar_url || null,
-        featured: true,
-        created_at: new Date().toISOString(),
-      });
-      toast.success("Review added"); setF({ client_name: "", location: "", rating: 5, message: "", avatar_url: "" }); setAvatarPreview(""); reload();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add review");
-    }
-  };
-  const del = async (id: string) => {
-    try {
-      await deleteAdminDoc("testimonials", id);
-      toast.success("Review deleted");
-      reload();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete review");
-    }
-  };
-
-  return (
-    <>
-      <Card>
-        <h3 className="font-display text-gold mb-3">Add Client Review</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Input placeholder="Client Name" value={f.client_name} onChange={(e) => setF({ ...f, client_name: e.target.value })} className={inputCls} />
-          <Input placeholder="Location (e.g. Mumbai)" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} />
-        </div>
-        <div className="mt-3">
-          <label className="text-xs uppercase tracking-widest text-gold/70 mb-2 block">Rating</label>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" onClick={() => setF({ ...f, rating: n })}>
-                <Star className={`h-6 w-6 ${n <= f.rating ? "fill-gold text-gold" : "text-cosmic-silver/30"}`} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <Textarea placeholder="Client's review message" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} className={`mt-3 ${inputCls}`} />
-        <div className="mt-3">
-          <label className="text-xs uppercase tracking-widest text-gold/70 mb-2 block">Client Photo (optional)</label>
-          <div className="flex items-center gap-4">
-            <ImageUpload bucket="testimonials" label="Upload Client Photo" onUploaded={(url) => { setF({ ...f, avatar_url: url }); setAvatarPreview(url); }} />
-            {avatarPreview && <img src={avatarPreview} alt="preview" className="h-16 w-16 rounded-full object-cover border border-gold/20" />}
-          </div>
-        </div>
-        <Button onClick={create} className="mt-3 bg-gradient-gold text-primary-foreground">Add Review</Button>
-      </Card>
-      <div className="grid sm:grid-cols-2 gap-3 mt-6">
-        {list.map((t) => (
-          <div key={t.id} className="glass-gold rounded-2xl p-4 flex gap-3">
-            {t.avatar_url ? <img src={t.avatar_url} className="h-12 w-12 rounded-full object-cover" /> : <div className="h-12 w-12 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold">{t.client_name?.[0] || "?"}</div>}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">{t.client_name}</span>
-                <span className="text-xs text-gold">{"★".repeat(t.rating)}</span>
-              </div>
-              {t.location && <div className="text-xs text-cosmic-silver/60">{t.location}</div>}
-              <p className="text-xs text-cosmic-silver/80 mt-1 line-clamp-2">{t.message}</p>
-            </div>
-            <button onClick={() => del(t.id)} className="text-destructive self-start"><Trash2 className="h-4 w-4" /></button>
-          </div>
-        ))}
-      </div>
     </>
   );
 };
