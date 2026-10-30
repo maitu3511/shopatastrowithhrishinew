@@ -802,15 +802,16 @@ export function trackPurchase(payload: PurchaseEventPayload): boolean {
   }
 
   // 3. Meta Pixel Purchase event with eventID deduplication
-  if (window.fbq) {
+  const pixelValue = Number(payload.total);
+  if (window.fbq && Number.isFinite(pixelValue) && pixelValue > 0) {
     window.fbq(
       "track",
       "Purchase",
       {
         content_ids: contentIds,
         content_type: "product",
-        value,
-        currency,
+        value: pixelValue,
+        currency: "INR",
         num_items: (payload.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0),
       },
       { eventID: `order_${orderKey}` }
