@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { useProducts } from "@/hooks/useProducts";
 import { lineKey, useCart } from "@/lib/cart";
 import { resolveImages, handleImageError } from "@/lib/productImages";
-import { inr, mrpOf, type DBProduct } from "@/lib/shop";
+import { inr, mrpOf, productRouteId, isTestItem, type DBProduct } from "@/lib/shop";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -101,7 +103,7 @@ const ProductRow = ({ product, priority }: { product: DBProduct; priority?: bool
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-gold to-transparent" />
       )}
       <Link
-        to={`/product/${product.id}`}
+        to={`/product/${productRouteId(product)}`}
         className="relative sm:w-56 lg:w-64 flex-shrink-0 bg-secondary overflow-hidden group"
         aria-label={`View ${product.name}`}
       >
@@ -138,7 +140,7 @@ const ProductRow = ({ product, priority }: { product: DBProduct; priority?: bool
             {product.category && (
               <p className="text-[10px] uppercase tracking-[0.24em] text-gold mb-2">{product.category}</p>
             )}
-            <Link to={`/product/${product.id}`}>
+            <Link to={`/product/${productRouteId(product)}`}>
               <h3 className="font-display text-xl sm:text-2xl hover:text-gold transition-colors">{product.name}</h3>
             </Link>
           </div>
@@ -212,18 +214,35 @@ const ProductRow = ({ product, priority }: { product: DBProduct; priority?: bool
 
 const Shop = () => {
   const { products, loading } = useProducts();
+  const [adminProducts, setAdminProducts] = useState<DBProduct[]>([]);
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<SortKey>("featured");
 
+  useEffect(() => {
+    void getDocs(collection(db, "products")).then((snap) => {
+      const rows = snap.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as unknown as DBProduct))
+        .filter((product) => product.active !== false && product.category !== "test" && !isTestItem(product.name));
+      setAdminProducts(rows);
+    }).catch((err) => console.warn("Public products load warning:", err));
+  }, []);
+
+  const publicProducts = useMemo(() => {
+    const merged = new Map<string, DBProduct>();
+    for (const product of products) merged.set(product.id, product);
+    for (const product of adminProducts) merged.set(product.id, product);
+    return Array.from(merged.values()).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }, [products, adminProducts]);
+
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean) as string[]))],
-    [products]
+    () => ["All", ...Array.from(new Set(publicProducts.map((p) => p.category).filter(Boolean) as string[]))],
+    [publicProducts]
   );
 
   const list = useMemo(() => {
-    let out = products.filter((p) => {
+    let out = publicProducts.filter((p) => {
       const matchQ = !q || `${p.name} ${p.description ?? ""}`.toLowerCase().includes(q.toLowerCase());
       const matchC = category === "All" || p.category === category;
       return matchQ && matchC;
@@ -233,17 +252,17 @@ const Shop = () => {
     if (sort === "price-desc") out.sort((a, b) => Number(b.price) - Number(a.price));
     if (sort === "name") out.sort((a, b) => a.name.localeCompare(b.name));
     return out;
-  }, [products, q, category, sort]);
+  }, [publicProducts, q, category, sort]);
 
-  const trishield = products.find((p) => p.id === "trishield-bracelet");
+  const trishield = publicProducts.find((p) => p.id === "trishield-bracelet");
 
   // Track product list view once products are loaded
   const trackedListRef = useRef(false);
   useEffect(() => {
-    if (products.length > 0 && !trackedListRef.current) {
+    if (publicProducts.length > 0 && !trackedListRef.current) {
       trackedListRef.current = true;
       trackViewItemList(
-        products.map((p) => ({
+        publicProducts.map((p) => ({
           id: p.id,
           name: p.name,
           price: Number(p.price),
@@ -252,7 +271,7 @@ const Shop = () => {
         category === "All" ? "Full Collection" : `${category} Collection`
       );
     }
-  }, [products, category]);
+  }, [publicProducts, category]);
 
   // Track search query with debounce
   useEffect(() => {
@@ -277,10 +296,10 @@ const Shop = () => {
           url: "https://astrowithhrishi.com/shop",
           mainEntity: {
             "@type": "ItemList",
-            itemListElement: products.slice(0, 20).map((p, idx) => ({
+            itemListElement: publicProducts.slice(0, 20).map((p, idx) => ({
               "@type": "ListItem",
               position: idx + 1,
-              url: `https://astrowithhrishi.com/product/${p.id}`,
+              url: `https://astrowithhrishi.com/product/${productRouteId(p)}`, 
               name: p.name,
             })),
           },

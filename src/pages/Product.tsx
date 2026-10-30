@@ -7,13 +7,13 @@ import SEO, { SITE_URL } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { lineKey, useCart } from "@/lib/cart";
 import { resolveImages, handleImageError } from "@/lib/productImages";
-import { inr, mrpOf, deliveryEstimate, type DBProduct } from "@/lib/shop";
+import { inr, mrpOf, deliveryEstimate, slugifyProductName, productRouteId, type DBProduct } from "@/lib/shop";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { catalogById } from "@/lib/catalog";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { trackViewItem, trackAddToCart } from "@/lib/analytics";
 
@@ -46,7 +46,12 @@ const Product = () => {
         if (docSnap.exists()) {
           setProduct({ id: docSnap.id, ...docSnap.data() } as unknown as DBProduct);
         } else {
-          setProduct(fallback ?? null);
+          const snap = await getDocs(collection(db, "products"));
+          if (!alive) return;
+          const bySlug = snap.docs
+            .map((row) => ({ id: row.id, ...row.data() } as unknown as DBProduct))
+            .find((row) => row.active !== false && (productRouteId(row) === id || slugifyProductName(row.name) === id));
+          setProduct(bySlug ?? fallback ?? null);
         }
       } catch (err) {
         console.warn("Product fetch from Firestore warning, using catalog fallback:", err);

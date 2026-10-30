@@ -77,6 +77,7 @@ const placeholder = LOCAL_IMAGES["1000212756"];
  */
 export const resolveImage = (ref?: string | null): string => {
   if (!ref) return placeholder;
+  if (ref.startsWith("/api/media/") || ref.startsWith("/assets/") || /^(https?:)?\/\//.test(ref) || ref.startsWith("data:")) return ref;
   if (LOCAL_IMAGES[ref]) return LOCAL_IMAGES[ref];
   // Stored values can be plain filenames ("1000212783 copy.jpg"), root paths
   // ("/assets/products/1000212783.jpg") or legacy CDN pointers. Match on the file
@@ -87,7 +88,7 @@ export const resolveImage = (ref?: string | null): string => {
   const id = fileName.match(/\d{6,}/)?.[0];
   if (id && LOCAL_IMAGES[id]) return LOCAL_IMAGES[id];
   if (ref.startsWith("/__l5e/")) return placeholder;
-  if (/^(https?:)?\/\//.test(ref) || ref.startsWith("data:")) return ref;
+  if (/^(https?:)?\/\//.test(ref) || ref.startsWith("data:") || ref.startsWith("/api/media/") || ref.startsWith("/assets/")) return ref;
   return placeholder;
 };
 
