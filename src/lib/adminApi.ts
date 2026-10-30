@@ -93,6 +93,10 @@ export const updateAdminOrder = async (id: string, fields: Record<string, unknow
   await request(`/api/admin/collection/orders/${id}`, { method: "PUT", body: JSON.stringify(fields) });
 };
 
+export const softDeleteAdminOrder = async (id: string): Promise<void> => {
+  await request(`/api/admin/orders/${id}/soft-delete`, { method: "POST" });
+};
+
 export interface PaymentGatewayAdminSettings {
   razorpay_enabled: boolean;
   razorpay_key_id: string;

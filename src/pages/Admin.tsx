@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { Trash2, Download, Upload, Star, Plus, X, Pencil, Truck, BarChart3, Lock, KeyRound, ShieldCheck, Eye, EyeOff, Video, Film, Clock, Play } from "lucide-react";
+import { Trash2, Download, Upload, Plus, X, Pencil, Truck, BarChart3, Lock, KeyRound, ShieldCheck, Eye, EyeOff, Video, Film, Clock, Play } from "lucide-react";
 import ProductEditDialog from "@/components/admin/ProductEditDialog";
 import HighlightsManager from "@/components/admin/HighlightsManager";
 import ReviewsManager from "@/components/admin/ReviewsManager";
@@ -173,7 +173,7 @@ const Admin = () => {
         <StatsOverview />
         <Tabs defaultValue="analytics" className="w-full mt-6">
           <TabsList className="glass-gold flex-wrap h-auto justify-start">
-            {["analytics", "appointments", "shop", "orders", "payments", "reviews", "highlights", "testimonials", "offers", "messages", "customers"].map((t) => (
+            {["analytics", "appointments", "shop", "orders", "payments", "reviews", "highlights", "offers", "messages", "customers"].map((t) => (
               <TabsTrigger key={t} value={t} className="capitalize data-[state=active]:bg-gradient-gold data-[state=active]:text-primary-foreground">
                 {t === "analytics" ? "Analytics & Tracking" : t === "payments" ? "Payment Gateway" : t}
               </TabsTrigger>
@@ -186,7 +186,6 @@ const Admin = () => {
           <TabsContent value="payments"><PaymentSettingsTab /></TabsContent>
           <TabsContent value="reviews"><ReviewsManager /></TabsContent>
           <TabsContent value="highlights"><HighlightsManager /></TabsContent>
-          <TabsContent value="testimonials"><TestimonialsTab /></TabsContent>
           <TabsContent value="offers"><OffersTab /></TabsContent>
           <TabsContent value="messages"><MessagesTab /></TabsContent>
           <TabsContent value="customers"><CustomersTab /></TabsContent>
@@ -623,106 +622,47 @@ const ProductsTab = () => {
   );
 };
 
-/* ─── testimonials (client reviews) ─── */
-
-const TestimonialsTab = () => {
-  const [list, reload] = useList("testimonials");
-  const [f, setF] = useState({ client_name: "", location: "", rating: 5, message: "", avatar_url: "" });
-  const [avatarPreview, setAvatarPreview] = useState("");
-
-  const create = async () => {
-    if (!f.client_name.trim()) return toast.error("Client name required");
-    if (!f.message.trim()) return toast.error("Review message required");
-    try {
-      await createAdminDoc("testimonials", {
-        client_name: f.client_name.trim(),
-        location: f.location.trim() || null,
-        rating: f.rating,
-        message: f.message.trim(),
-        avatar_url: f.avatar_url || null,
-        featured: true,
-        created_at: new Date().toISOString(),
-      });
-      toast.success("Review added"); setF({ client_name: "", location: "", rating: 5, message: "", avatar_url: "" }); setAvatarPreview(""); reload();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add review");
-    }
-  };
-  const del = async (id: string) => {
-    try {
-      await deleteAdminDoc("testimonials", id);
-      toast.success("Review deleted");
-      reload();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete review");
-    }
-  };
-
-  return (
-    <>
-      <Card>
-        <h3 className="font-display text-gold mb-3">Add Client Review</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Input placeholder="Client Name" value={f.client_name} onChange={(e) => setF({ ...f, client_name: e.target.value })} className={inputCls} />
-          <Input placeholder="Location (e.g. Mumbai)" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} />
-        </div>
-        <div className="mt-3">
-          <label className="text-xs uppercase tracking-widest text-gold/70 mb-2 block">Rating</label>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" onClick={() => setF({ ...f, rating: n })}>
-                <Star className={`h-6 w-6 ${n <= f.rating ? "fill-gold text-gold" : "text-cosmic-silver/30"}`} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <Textarea placeholder="Client's review message" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} className={`mt-3 ${inputCls}`} />
-        <div className="mt-3">
-          <label className="text-xs uppercase tracking-widest text-gold/70 mb-2 block">Client Photo (optional)</label>
-          <div className="flex items-center gap-4">
-            <ImageUpload bucket="testimonials" label="Upload Client Photo" onUploaded={(url) => { setF({ ...f, avatar_url: url }); setAvatarPreview(url); }} />
-            {avatarPreview && <img src={avatarPreview} alt="preview" className="h-16 w-16 rounded-full object-cover border border-gold/20" />}
-          </div>
-        </div>
-        <Button onClick={create} className="mt-3 bg-gradient-gold text-primary-foreground">Add Review</Button>
-      </Card>
-      <div className="grid sm:grid-cols-2 gap-3 mt-6">
-        {list.map((t) => (
-          <div key={t.id} className="glass-gold rounded-2xl p-4 flex gap-3">
-            {t.avatar_url ? <img src={t.avatar_url} className="h-12 w-12 rounded-full object-cover" /> : <div className="h-12 w-12 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold">{t.client_name?.[0] || "?"}</div>}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">{t.client_name}</span>
-                <span className="text-xs text-gold">{"★".repeat(t.rating)}</span>
-              </div>
-              {t.location && <div className="text-xs text-cosmic-silver/60">{t.location}</div>}
-              <p className="text-xs text-cosmic-silver/80 mt-1 line-clamp-2">{t.message}</p>
-            </div>
-            <button onClick={() => del(t.id)} className="text-destructive self-start"><Trash2 className="h-4 w-4" /></button>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-};
-
 /* ─── offers (coupons) ─── */
 
 const OffersTab = () => {
   const [list, reload] = useList("coupons");
   const [f, setF] = useState({ code: "", description: "", discount_type: "percent", discount_value: "", min_order: "0", max_discount: "", usage_limit: "", expires_at: "" });
+  const [editing, setEditing] = useState<any | null>(null);
+  const [edit, setEdit] = useState({ code: "", discount_type: "percent", discount_value: "", min_order: "0", active: true });
+
+  const validateOffer = (code: string, discountType: string, discountValue: string, minOrder: string, excludeId?: string) => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!normalizedCode) return "Coupon code required";
+    if (list.some((item: any) => item.id !== excludeId && String(item.code ?? "").trim().toUpperCase() === normalizedCode)) return "Coupon code already exists";
+
+    const discount = Number(discountValue);
+    if (!discountValue || !Number.isFinite(discount)) return "Discount value required";
+    if (discount < 0) return "Discount value cannot be negative";
+    if (discountType === "percent" && (discount < 1 || discount > 100)) return "Percentage discount must be between 1 and 100";
+
+    const minimum = Number(minOrder || 0);
+    if (!Number.isFinite(minimum) || minimum < 0) return "Minimum order cannot be negative";
+    return null;
+  };
 
   const create = async () => {
-    if (!f.code.trim()) return toast.error("Coupon code required");
-    if (!f.discount_value) return toast.error("Discount value required");
+    const validationError = validateOffer(f.code, f.discount_type, f.discount_value, f.min_order);
+    if (validationError) return toast.error(validationError);
+
+    const discountValue = parseFloat(f.discount_value);
+    const minOrder = parseFloat(f.min_order) || 0;
+    const maxDiscount = f.max_discount ? parseFloat(f.max_discount) : null;
+    const usageLimit = f.usage_limit ? parseInt(f.usage_limit) : null;
+    if ((maxDiscount !== null && maxDiscount < 0) || (usageLimit !== null && usageLimit < 0)) return toast.error("Maximum discount and usage limit cannot be negative");
+
     const payload: any = {
       code: f.code.trim().toUpperCase(),
       description: f.description.trim() || null,
       discount_type: f.discount_type,
-      discount_value: parseFloat(f.discount_value),
-      min_order: parseFloat(f.min_order) || 0,
-      max_discount: f.max_discount ? parseFloat(f.max_discount) : null,
-      usage_limit: f.usage_limit ? parseInt(f.usage_limit) : null,
+      discount_value: discountValue,
+      min_order: minOrder,
+      max_discount: maxDiscount,
+      usage_limit: usageLimit,
       expires_at: f.expires_at ? new Date(f.expires_at).toISOString() : null,
       active: true,
       used_count: 0,
@@ -743,9 +683,42 @@ const OffersTab = () => {
       toast.error(err.message || "Failed to toggle offer");
     }
   };
-  const del = async (id: string) => {
+  const startEdit = (offer: any) => {
+    setEditing(offer);
+    setEdit({
+      code: String(offer.code ?? ""),
+      discount_type: offer.discount_type === "flat" ? "flat" : "percent",
+      discount_value: String(offer.discount_value ?? ""),
+      min_order: String(offer.min_order ?? 0),
+      active: offer.active !== false,
+    });
+  };
+  const saveEdit = async () => {
+    if (!editing) return;
+    const validationError = validateOffer(edit.code, edit.discount_type, edit.discount_value, edit.min_order, editing.id);
+    if (validationError) return toast.error(validationError);
     try {
-      await deleteAdminDoc("coupons", id);
+      await updateAdminDoc("coupons", editing.id, {
+        code: edit.code.trim().toUpperCase(),
+        discount_type: edit.discount_type,
+        discount_value: parseFloat(edit.discount_value),
+        min_order: parseFloat(edit.min_order) || 0,
+        active: edit.active,
+        updated_at: new Date().toISOString(),
+      });
+      toast.success("Offer updated");
+      setEditing(null);
+      reload();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update offer");
+    }
+  };
+  const del = async (offer: any) => {
+    if (!window.confirm(`Delete offer "${offer.code}"? This cannot be undone.`)) return;
+    try {
+      await deleteAdminDoc("coupons", offer.id);
+      if (editing?.id === offer.id) setEditing(null);
+      toast.success("Offer deleted");
       reload();
     } catch (err: any) {
       toast.error(err.message || "Failed to delete offer");
@@ -774,25 +747,50 @@ const OffersTab = () => {
       <div className="space-y-3 mt-6">
         {list.length === 0 && <div className="text-center text-cosmic-silver/60 py-8">No offers yet</div>}
         {list.map((c) => (
-          <div key={c.id} className="glass-gold rounded-2xl p-4 flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-gold text-lg">{c.code}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${c.active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{c.active ? "Active" : "Inactive"}</span>
+          <div key={c.id} className="glass-gold rounded-2xl p-4">
+            {editing?.id === c.id ? (
+              <div>
+                <h4 className="font-display text-gold mb-3">Edit Offer</h4>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Input placeholder="Coupon Code" value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value.toUpperCase() })} className={inputCls} />
+                  <select value={edit.discount_type} onChange={(e) => setEdit({ ...edit, discount_type: e.target.value })} className={`h-10 rounded-md ${inputCls} px-3`}>
+                    <option value="percent">Percentage (%)</option>
+                    <option value="flat">Flat Amount (₹)</option>
+                  </select>
+                  <Input placeholder={edit.discount_type === "percent" ? "Discount %" : "Discount ₹"} type="number" value={edit.discount_value} onChange={(e) => setEdit({ ...edit, discount_value: e.target.value })} className={inputCls} />
+                  <Input placeholder="Min Order ₹" type="number" value={edit.min_order} onChange={(e) => setEdit({ ...edit, min_order: e.target.value })} className={inputCls} />
+                  <label className="flex items-center gap-2 text-sm text-cosmic-silver">
+                    <input type="checkbox" checked={edit.active} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Active
+                  </label>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button onClick={saveEdit} className="bg-gradient-gold text-primary-foreground">Save</Button>
+                  <Button type="button" variant="outline" onClick={() => setEditing(null)} className="border-gold/30">Cancel</Button>
+                </div>
               </div>
-              <div className="text-xs text-cosmic-silver/70 mt-1">
-                {c.discount_type === "percent" ? `${c.discount_value}% off` : `₹${c.discount_value} off`}
-                {c.min_order > 0 && ` • Min order ₹${c.min_order}`}
-                {c.max_discount && ` • Max ₹${c.max_discount}`}
-                {c.usage_limit && ` • ${c.used_count || 0}/${c.usage_limit} used`}
-                {c.expires_at && ` • Expires ${new Date(c.expires_at).toLocaleDateString()}`}
+            ) : (
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-gold text-lg">{c.code}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{c.active ? "Active" : "Inactive"}</span>
+                  </div>
+                  <div className="text-xs text-cosmic-silver/70 mt-1">
+                    {c.discount_type === "percent" ? `${c.discount_value}% off` : `₹${c.discount_value} off`}
+                    {c.min_order > 0 && ` • Min order ₹${c.min_order}`}
+                    {c.max_discount && ` • Max ₹${c.max_discount}`}
+                    {c.usage_limit && ` • ${c.used_count || 0}/${c.usage_limit} used`}
+                    {c.expires_at && ` • Expires ${new Date(c.expires_at).toLocaleDateString()}`}
+                  </div>
+                  {c.description && <div className="text-xs text-cosmic-silver/60 mt-1">{c.description}</div>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => toggle(c.id, c.active)} className="text-xs px-2 py-1 rounded border border-gold/30 hover:bg-gold/10">{c.active ? "Deactivate" : "Activate"}</button>
+                  <button onClick={() => startEdit(c)} className="text-gold" aria-label={`Edit offer ${c.code}`}><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => del(c)} className="text-destructive" aria-label={`Delete offer ${c.code}`}><Trash2 className="h-4 w-4" /></button>
+                </div>
               </div>
-              {c.description && <div className="text-xs text-cosmic-silver/60 mt-1">{c.description}</div>}
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => toggle(c.id, c.active)} className="text-xs px-2 py-1 rounded border border-gold/30 hover:bg-gold/10">{c.active ? "Deactivate" : "Activate"}</button>
-              <button onClick={() => del(c.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
-            </div>
+            )}
           </div>
         ))}
       </div>

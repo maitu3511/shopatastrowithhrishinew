@@ -129,6 +129,27 @@ export const updateDocument = async (req: Request, name: string, id: string) => 
   return json(200, { success: true, id });
 };
 
+/* ─── POST /api/admin/orders/:id/soft-delete ─── */
+export const softDeleteOrder = async (req: Request, id: string) => {
+  const admin = await requireAdmin(req);
+  assertDocId(id);
+
+  const db = getDb();
+  const ref = db.collection("orders").doc(id);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpError(404, "Order not found");
+    if (snap.data()?.deleted_at) throw new HttpError(409, "Order is already deleted");
+
+    tx.set(ref, {
+      deleted_at: new Date().toISOString(),
+      deleted_by: admin.email ?? admin.uid,
+    }, { merge: true });
+  });
+
+  return json(200, { success: true, id });
+};
+
 /* ─── DELETE /api/admin/collection/:name/:id ─── */
 export const deleteDocument = async (req: Request, name: string, id: string) => {
   await requireAdmin(req);

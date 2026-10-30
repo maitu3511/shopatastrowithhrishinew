@@ -10,6 +10,7 @@ export type ProductVideo = {
 
 export type DBProduct = {
   id: string;
+  slug?: string;
   name: string;
   title?: string;
   description: string | null;
@@ -37,6 +38,22 @@ export type DBProduct = {
 };
 
 export const inr = (n: number) => `₹${Math.round(Number(n) || 0).toLocaleString("en-IN")}`;
+
+export const slugifyProductName = (name?: string | null) =>
+  String(name ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "product";
+
+export const productRouteId = (product: Pick<DBProduct, "id" | "name" | "slug">) => {
+  const nameSlug = slugifyProductName(product.name);
+  if (typeof product.slug === "string" && product.slug.trim()) return product.slug.trim();
+  if (product.id === nameSlug) return product.id;
+  return nameSlug;
+};
 
 /** Strike-through MRP derived from the product's discount percentage. */
 export const mrpOf = (price: number, discount: number) =>

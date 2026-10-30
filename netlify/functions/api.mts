@@ -30,6 +30,7 @@ const routes: { method: string; pattern: RegExp; handler: Handler }[] = [
   { method: "POST", pattern: /^admin\/collection\/([a-z_]+)$/, handler: (req, [name]) => admin.createDocument(req, name) },
   { method: "PUT", pattern: /^admin\/collection\/([a-z_]+)\/([^/]+)$/, handler: (req, [name, id]) => admin.updateDocument(req, name, id) },
   { method: "DELETE", pattern: /^admin\/collection\/([a-z_]+)\/([^/]+)$/, handler: (req, [name, id]) => admin.deleteDocument(req, name, id) },
+  { method: "POST", pattern: /^admin\/orders\/([^/]+)\/soft-delete$/, handler: (req, [id]) => admin.softDeleteOrder(req, id) },
   { method: "GET", pattern: /^admin\/payment-settings$/, handler: (req) => admin.getPaymentSettings(req) },
   { method: "POST", pattern: /^admin\/payment-settings$/, handler: (req) => admin.savePaymentSettings(req) },
   { method: "POST", pattern: /^admin\/test-razorpay$/, handler: (req) => admin.testRazorpay(req) },

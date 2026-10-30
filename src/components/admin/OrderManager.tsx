@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2, RefreshCw } from "lucide-react";
+import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,7 +12,7 @@ import OrderDetailDialog from "@/components/admin/OrderDetailDialog";
 import { inr } from "@/lib/shop";
 import { ADMIN_STATUS_OPTIONS, canTransition, normalizeStatus, paymentLabel, statusLabel } from "@/lib/orderStatus";
 import { type AdminOrderRow } from "@/lib/orders";
-import { fetchAdminCollection, updateAdminDoc } from "@/lib/adminApi";
+import { fetchAdminCollection, softDeleteAdminOrder, updateAdminDoc } from "@/lib/adminApi";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { updateAdminOrder } from "@/lib/adminApi";
 import { db } from "@/lib/firebase";
@@ -57,6 +57,7 @@ const OrderManager = () => {
   const [bulkTarget, setBulkTarget] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState<AdminOrderRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminOrderRow | null>(null);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -65,10 +66,9 @@ const OrderManager = () => {
       unsubscribe = onSnapshot(
         qCol,
         (snapshot) => {
-          const rows: AdminOrderRow[] = snapshot.docs.map((docSnap) => ({
-            id: docSnap.id,
-            ...docSnap.data(),
-          })) as AdminOrderRow[];
+          const rows: AdminOrderRow[] = snapshot.docs
+            .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+            .filter((row) => !(row as any).deleted_at) as AdminOrderRow[];
           setOrders(rows);
           setLoading(false);
           setError(null);
@@ -77,7 +77,7 @@ const OrderManager = () => {
           console.warn("Orders listener fallback to admin API:", err.message);
           try {
             const rows = await fetchAdminCollection("orders");
-            setOrders(rows as AdminOrderRow[]);
+            setOrders((rows as AdminOrderRow[]).filter((row) => !(row as any).deleted_at));
             setError(null);
           } catch (e) {
             setError("Unable to load orders. Please try again.");
@@ -88,7 +88,7 @@ const OrderManager = () => {
       );
     } catch (e) {
       fetchAdminCollection("orders").then((rows) => {
-        setOrders(rows as AdminOrderRow[]);
+        setOrders((rows as AdminOrderRow[]).filter((row) => !(row as any).deleted_at));
         setLoading(false);
       });
     }
@@ -139,6 +139,23 @@ const OrderManager = () => {
 
   const toggleOne = (id: string, checked: boolean) => {
     setSelected(checked ? [...selected, id] : selected.filter((x) => x !== id));
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setBusy(true);
+    try {
+      await softDeleteAdminOrder(deleteTarget.id);
+      setOrders((current) => current.filter((order) => order.id !== deleteTarget.id));
+      setSelected((current) => current.filter((id) => id !== deleteTarget.id));
+      if (active?.id === deleteTarget.id) setActive(null);
+      toast.success(`Order ${deleteTarget.order_number ?? deleteTarget.id} deleted from the admin list`);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete order");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const applyBulk = async () => {
@@ -273,7 +290,13 @@ const OrderManager = () => {
                   </td>
                   <td className="p-3 text-muted-foreground">{o.tracking_number ?? "—"}</td>
                   <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="ghost" onClick={() => setActive(o)} className="h-7 text-xs text-gold">Manage</Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => setActive(o)} className="h-7 text-xs text-gold">Manage</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(o)} className="h-7 px-2 text-xs text-destructive" aria-label={`Delete order ${o.order_number ?? o.id}`}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="ml-1">Delete</span>
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -299,6 +322,23 @@ const OrderManager = () => {
           onChanged={() => {}}
         />
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && !busy && setDeleteTarget(null)}>
+        <AlertDialogContent className="glass-gold">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete order {deleteTarget?.order_number ?? deleteTarget?.id ?? ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will hide the order from the admin list only. The original payment, refund, tracking, and receipt records will remain unchanged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={busy} className="bg-destructive text-destructive-foreground">
+              {busy ? "Deleting..." : "Delete Order"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!bulkTarget} onOpenChange={(o) => !o && setBulkTarget(null)}>
         <AlertDialogContent className="glass-gold">
