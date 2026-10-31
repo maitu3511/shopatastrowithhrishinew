@@ -215,10 +215,25 @@ const ProductRow = ({ product, priority }: { product: DBProduct; priority?: bool
 const Shop = () => {
   const { products, loading } = useProducts();
   const [adminProducts, setAdminProducts] = useState<DBProduct[]>([]);
+  const [activeOffers, setActiveOffers] = useState<Array<{ description: string | null; discount_type: "percent" | "flat"; discount_value: number; min_order: number }>>([]);
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<SortKey>("featured");
+
+  useEffect(() => {
+    const loadOffers = async () => {
+      try {
+        const response = await fetch("/api/offers/active");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (Array.isArray(data?.offers)) setActiveOffers(data.offers);
+      } catch {
+        // Offers are optional; failures should not affect the shop.
+      }
+    };
+    void loadOffers();
+  }, []);
 
   useEffect(() => {
     void getDocs(collection(db, "products")).then((snap) => {
@@ -306,6 +321,23 @@ const Shop = () => {
         }}
       />
       <div className="container">
+        {activeOffers.length > 0 && (
+          <div className="mb-6 rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-foreground">
+            {activeOffers.map((offer, index) => {
+              const discount = offer.discount_type === "flat"
+                ? `₹${offer.discount_value} off`
+                : `${offer.discount_value}% off`;
+              const minimum = offer.min_order > 0 ? ` on orders above ₹${offer.min_order}` : "";
+              return (
+                <span key={`${index}-${discount}`}>
+                  {index > 0 && <span className="mx-2 text-gold">•</span>}
+                  {discount}{minimum}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Featured New Launch */}
         {trishield && (
           <div className="lux-card rounded-3xl overflow-hidden border-2 border-gold/50 glow-gold relative mb-12">

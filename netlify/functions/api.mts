@@ -7,6 +7,7 @@ import * as payments from "../lib/routes/payments";
 import * as tracking from "../lib/routes/tracking";
 import * as admin from "../lib/routes/admin";
 import * as media from "../lib/routes/media";
+import * as offers from "../lib/routes/offers";
 
 type Handler = (req: Request, params: string[]) => Promise<Response>;
 
@@ -36,6 +37,7 @@ const routes: { method: string; pattern: RegExp; handler: Handler }[] = [
   { method: "POST", pattern: /^admin\/test-razorpay$/, handler: (req) => admin.testRazorpay(req) },
   { method: "POST", pattern: /^admin\/upload-media$/, handler: (req) => media.uploadMedia(req) },
   { method: "GET", pattern: /^media\/([A-Za-z0-9._-]+)$/, handler: (req, [key]) => media.serveMedia(req, key) },
+  { method: "GET", pattern: /^offers\/active$/, handler: () => offers.activeOffers() },
   { method: "GET", pattern: /^admin\/tracking-settings$/, handler: (req) => admin.getTrackingSettings(req) },
   { method: "POST", pattern: /^admin\/tracking-settings$/, handler: (req) => admin.saveTrackingSettings(req) },
 ];
