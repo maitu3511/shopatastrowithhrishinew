@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { lineKey, useCart } from "@/lib/cart";
 import { resolveImages, handleImageError } from "@/lib/productImages";
 import { inr, mrpOf, deliveryEstimate, slugifyProductName, productRouteId, type DBProduct } from "@/lib/shop";
+import { getYouTubeEmbedUrl } from "@/lib/video";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -77,6 +78,7 @@ const Product = () => {
   }, [product?.id]);
 
   const images = useMemo(() => (product ? resolveImages(product) : []), [product]);
+  const youtubeEmbedUrl = product ? getYouTubeEmbedUrl(product.video_url) : null;
 
   if (loading) {
     return (
@@ -216,13 +218,23 @@ const Product = () => {
             <div className="aspect-square rounded-2xl overflow-hidden bg-secondary border border-border relative">
               {showVideo && product.video_url ? (
                 <div className="w-full h-full bg-black/95 relative flex items-center justify-center">
-                  <video
-                    src={product.video_url}
-                    controls
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-contain"
-                  />
+                  {youtubeEmbedUrl ? (
+                    <iframe
+                      src={youtubeEmbedUrl}
+                      title={product.video_title || "Product video"}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  ) : (
+                    <video
+                      src={product.video_url}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                  )}
                   <div className="absolute top-3 left-3 flex items-center gap-2 z-10 pointer-events-none">
                     <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-gold text-primary-foreground shadow flex items-center gap-1">
                       <Video className="h-3 w-3" />
@@ -405,12 +417,22 @@ const Product = () => {
             <div className="mb-10 p-6 sm:p-7 rounded-3xl border border-gold/30 glass-gold shadow-xl">
               <div className="flex flex-col lg:flex-row gap-6 items-center">
                 <div className="w-full lg:w-80 shrink-0 aspect-video rounded-2xl overflow-hidden bg-black/95 border border-gold/40 relative shadow-lg">
-                  <video
-                    src={product.video_url}
-                    controls
-                    playsInline
-                    className="w-full h-full object-contain"
-                  />
+                  {youtubeEmbedUrl ? (
+                    <iframe
+                      src={youtubeEmbedUrl}
+                      title={product.video_title || "Client review video"}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  ) : (
+                    <video
+                      src={product.video_url}
+                      controls
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                  )}
                   <div className="absolute top-2 left-2 bg-gold text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded shadow flex items-center gap-1 pointer-events-none">
                     <Play className="h-2.5 w-2.5 fill-current" /> {product.video_duration || 30}s Video
                   </div>
